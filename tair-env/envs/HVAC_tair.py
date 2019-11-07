@@ -3,15 +3,16 @@ from gym import error, spaces, utils
 from gym.utils import seeding
 import random
 from gym import spaces
+import numpy as np
 
 class pred_Tair_env(gym.Env):
     metadata = {'render.modes': ['human']}
   
-    def __init__(self, data, all_data, min_reward, max_reward, n_actions, 
-                max_steps, Hourofday_idx, Tamb_idx, Rad_hor_idx, 
+    def __init__(self, data, all_data, start_pred_index, min_reward, max_reward, n_actions, 
+                max_steps=168, Hourofday_idx, Tamb_idx, Rad_hor_idx, 
                 pred_Tair_idx, Belegung_idx, Setpoint_Temp_idx,
                 Air_flow_rate_idx, y_scaler_Tair, y_scaler_Energy, 
-                model_Tair, model_Energy_input):
+                model_Tair, model_Energy_input, Solltemp=21, Energy_divident=500):
         
         super(pred_Tair_env, self).__init__()
         
@@ -23,12 +24,22 @@ class pred_Tair_env(gym.Env):
         self.observation_space = spaces.Box(low=0.0, high=1.0, 
                                             shape=(1,5), 
                                             dtype=np.float32)
-        
+        ##create the possible actions the agent can take inside the environment
+        possible_actions = list((np.arange(19,41)-20)/20)
+
+        for i in range(n_actions):
+            if i == 0:
+                possible_actions[i] = [0.0, 0.0]
+            else:
+                possible_actions[i] = [possible_actions[i], 1]
+
+        self.possible_actions = possible_actions[:]
+
     def reset(self):        
         self.current_step = 0 
         # Reset the state of the environment to the initial state
         self.state = np.copy(self.data[self.current_step:self.current_step+1])
-
+        self.current_simtime = start_pred_index + 3 + self.current_step
         self.current_daytime = all_data[self.current_simtime][Hourofday_idx]
         self.future_Tamb = self.data[self.current_step:self.current_step+6, 2, Tamb_idx]
         self.future_Rad = self.data[self.current_step:self.current_step+6, 2, Rad_hor_idx]
@@ -36,8 +47,8 @@ class pred_Tair_env(gym.Env):
         
         occupation = self.state[0, 2, Belegung_idx]
         
-        raw_obs = self.state[0,-n_steps_obs:,:]        
-        obs = np.zeros((n_steps_obs, 5))
+        raw_obs = self.state[0,-1:,:]        
+        obs = np.zeros((1, 5))
         
         #if self.current_daytime > occupy_start and self.current_daytime <= occupy_end:
             #occupation += 1
@@ -47,17 +58,8 @@ class pred_Tair_env(gym.Env):
             obs[i, 1] = occupation
             obs[i, 2] = (self.current_daytime-1) / 23  #scale between 0 and 1
             obs[i, 3] = np.copy(self.future_Tamb[0])
-            #obs[i, 4] = np.copy(self.future_Tamb[1])
-            #obs[i, 5] = np.copy(self.future_Tamb[2])
-            #obs[i, 6] = np.copy(self.future_Tamb[3])
-            #obs[i, 7] = np.copy(self.future_Tamb[4])
-            #obs[i, 8] = np.copy(self.future_Tamb[5])
             obs[i, 4] = np.copy(self.future_Rad[0])
-            #obs[i, 10] = np.copy(self.future_Rad[1])
-            ##obs[i, 11] = np.copy(self.future_Rad[2])
-            #obs[i, 12] = np.copy(self.future_Rad[3])
-            #obs[i, 13] = np.copy(self.future_Rad[4])
-            #obs[i, 14] = np.copy(self.future_Rad[5])           
+        
         
         return obs
                                 
@@ -70,51 +72,44 @@ class pred_Tair_env(gym.Env):
         self.previous_state[0, 2, Air_flow_rate_idx] = control_params[1]
         energy_input_unscaled = model_Energy_input.predict(self.previous_state)
         energy_input = y_scaler_Energy.inverse_transform(energy_input_unscaled)
-        energy_input_reward = energy_input/500
+        self.energy_input_reward = energy_input/Energy_divident
 
         self._take_action(action)
         self.current_step += 1
         self.current_simtime += 1
         self.current_daytime = all_data[self.current_simtime][Hourofday_idx]
         
-        self.future_Tamb = self.data[self.current_step:self.current_step+6, 2, Tamb_idx]
-        self.future_Rad = self.data[self.current_step:self.current_step+6, 2, Rad_hor_idx]
+        self.future_Tamb = self.data[self.current_step:self.current_step+1, 2, Tamb_idx]
+        self.future_Rad = self.data[self.current_step:self.current_step+1, 2, Rad_hor_idx]
         
         tair_after_step_scaled = np.copy(self.state[0, 2, pred_Tair_idx])
         tair_after_step = y_scaler_Tair.inverse_transform(self.state[0, 2, pred_Tair_idx].reshape(-1, 1))[0,0]
-        Temp_diff = abs(Solltemp - tair_after_step)
-        occupation = self.state[0, 2, Belegung_idx]
+        self.Temp_diff = abs(Solltemp - tair_after_step)
+        self.occupation = self.state[0, 2, Belegung_idx]
             
-        if occupation==1:
-            
-            reward = - (Temp_diff * 10)
-            
-        else:
-            
-            reward = np.min(-energy_input_reward,0)
+        reward = self._get_reward(self)
  
-        obs = np.zeros((n_steps_obs, 5))
+        obs = np.zeros((1, 5))
         
         for i in range(n_steps_obs):
             obs[i, 0] = tair_after_step_scaled
             obs[i, 1] = occupation
             obs[i, 2] = (self.current_daytime-1) / 23  #scale between 0 and 1
             obs[i, 3] = np.copy(self.future_Tamb[0])
-            #obs[i, 4] = np.copy(self.future_Tamb[1])
-            #obs[i, 5] = np.copy(self.future_Tamb[2])
-            #obs[i, 6] = np.copy(self.future_Tamb[3])
-            #obs[i, 7] = np.copy(self.future_Tamb[4])
-            #obs[i, 8] = np.copy(self.future_Tamb[5])
             obs[i, 4] = np.copy(self.future_Rad[0])
-            #obs[i, 10] = np.copy(self.future_Rad[1])
-            ##obs[i, 11] = np.copy(self.future_Rad[2])
-            #obs[i, 12] = np.copy(self.future_Rad[3])
-            #obs[i, 13] = np.copy(self.future_Rad[4])
-            #obs[i, 14] = np.copy(self.future_Rad[5])
             
         done = self.current_step > max_steps
             
         return obs, reward, done, {}
+    
+    def _get_reward(self):
+        
+        if self.occupation==1:
+            reward = - (self.Temp_diff * 10)
+        else:
+            reward = np.min(-self.energy_input_reward,0)
+        
+        return reward
     
     def _take_action(self, action):
         control_action = possible_actions[action]
@@ -166,14 +161,3 @@ class pred_Tair_env(gym.Env):
             
             self.state = next_state
             
-##create the possible actions the agent can take inside the environment
-num_possible_actions = 22
-possible_actions = list((np.arange(19,41)-20)/20)
-
-for i in range(n_actions):
-    if i == 0:
-        possible_actions[i] = [0.0, 0.0]
-    else:
-        possible_actions[i] = [possible_actions[i], 1]
-        
-possible_actions = possible_actions[:]
