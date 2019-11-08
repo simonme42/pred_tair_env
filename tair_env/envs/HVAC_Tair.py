@@ -18,7 +18,7 @@ class HVACTairEnv(gym.Env):
         super(HVACTairEnv, self).__init__()
 
         test_data = np.load("env_data/test_data.npy")
-        all_data = np.load("env_data/test_data.npy")
+        all_data = np.load("env_data/all_data.npy")
         self.start_pred_index = 1844
         self.y_scaler_Tair = joblib.load("env_data/y_scaler_Tair.save") 
         self.y_scaler_Energy = joblib.load("env_data/y_scaler_Energy.save") 
