@@ -1,8 +1,7 @@
-import gym
 from gym import error, spaces, utils
 from gym.utils import seeding
+import gym
 import random
-from gym import spaces
 import numpy as np
 
 class pred_Tair_env(gym.Env):
