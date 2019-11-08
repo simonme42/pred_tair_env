@@ -55,7 +55,7 @@ class HVACTairEnv(gym.Env):
         self.all_data = np.copy(all_data)
         self.state = np.copy(self.data[0:1])
         self.reward_range = (self.min_reward, self.max_reward) 
-        self.action_space = spaces.Discrete(n_actions)
+        self.action_space = spaces.Discrete(self.n_actions)
         self.observation_space = spaces.Box(low=0.0, high=1.0, 
                                             shape=(1,5), 
                                             dtype=np.float32)
