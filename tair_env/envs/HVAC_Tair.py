@@ -120,7 +120,7 @@ class HVACTairEnv(gym.Env):
         self.Temp_diff = abs(self.Solltemp - tair_after_step)
         self.occupation = self.state[0, 2, self.Belegung_idx]
             
-        reward = self._get_reward(self)
+        reward = self._get_reward()
  
         obs = np.zeros((1, 5))
         
