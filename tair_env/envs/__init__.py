@@ -1,1 +1,1 @@
-from tair-env.envs.HVAC_tair import HVAC_env
+from tair_env.envs.HVAC_Tair import HVACTairEnv
