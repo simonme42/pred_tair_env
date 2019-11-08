@@ -4,7 +4,7 @@ import gym
 import random
 import numpy as np
 
-class pred_Tair_env(gym.Env):
+class HVACTairEnv(gym.Env):
     metadata = {'render.modes': ['human']}
   
     def __init__(self, test_data, all_data, start_pred_index, y_scaler_Tair, y_scaler_Energy, 
