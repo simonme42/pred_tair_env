@@ -1,3 +1,9 @@
+from sklearn.externals import joblib
+from sklearn.preprocessing import MinMaxScaler
+
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import LSTM, Bidirectional, Dense
+
 from gym import error, spaces, utils
 from gym.utils import seeding
 import gym
@@ -7,14 +13,44 @@ import numpy as np
 class HVACTairEnv(gym.Env):
     metadata = {'render.modes': ['human']}
   
-    def __init__(self, test_data, all_data, start_pred_index, y_scaler_Tair, y_scaler_Energy, 
-                model_Tair, model_Energy_input, min_reward=-25, max_reward=0, n_actions=22, 
-                max_steps=168, Hourofday_idx, Tamb_idx, Rad_hor_idx, min_Tvl = 20, max_Tvl = 40,
-                pred_Tair_idx, Belegung_idx, Setpoint_Temp_idx,
-                Air_flow_rate_idx, Solltemp=21, Energy_divident=500):
+    def __init__(self):
         
         super(HVACTairEnv, self).__init__()
+
+        test_data = np.load("env_data/test_data.npy")
+        all_data = np.load("env_data/test_data.npy")
+        start_pred_index = 1844
+        y_scaler_Tair = joblib.load("env_data/y_scaler_Tair.save") 
+        y_scaler_Energy = joblib.load("env_data/y_scaler_Energy.save") 
         
+        model_Tair = Sequential()
+        model_Tair.add(Bidirectional(LSTM(256, activation='relu'), input_shape=(3, 6)))
+        model_Tair.add(Dense(1))
+        model_Tair.compile(optimizer=opt, loss='mse', metrics=['mse'])
+        model_Tair.load_weights("env_data/LSTM-256-Tair.keras")
+        
+        model_Energy = Sequential()
+        model_Energy.add(Bidirectional(LSTM(256, activation='relu'), input_shape=(3, 6)))
+        model_Energy.add(Dense(1))
+        model_Energy.compile(optimizer=opt, loss='mse', metrics=['mse'])
+        model_Energy.load_weights("env_data/LSTM-256-Energy_input.keras")
+        
+        min_reward=-25
+        max_reward = 0
+        n_actions = 22
+        max_steps = 168
+        min_Tvl = 20
+        max_Tvl = 40
+        pred_Tair_idx = 0
+        Setpoint_Temp_idx = 1
+        Tamb_idx = 2
+        Rad_hor_idx = 3
+        Heating_IO_idx = 4
+        Belegung_idx = 5
+        Hourofday_idx = 7
+        Solltemp = 21
+        Energy_divident = 500
+          
         self.data = np.copy(test_data)
         self.all_data = np.copy(all_data)
         self.state = np.copy(self.data[0:1])
@@ -38,7 +74,7 @@ class HVACTairEnv(gym.Env):
         # Reset the state of the environment to the initial state
         self.state = np.copy(self.data[self.current_step:self.current_step+1])
         self.current_simtime = start_pred_index + 3 + self.current_step
-        self.current_daytime = np.copy(all_data[self.current_simtime][Hourofday_idx])
+        self.current_daytime = np.copy(self.all_data[self.current_simtime][Hourofday_idx])
         self.future_Tamb = np.copy(self.data[self.current_step:self.current_step+1, 2, Tamb_idx])
         self.future_Rad = np.copy(self.data[self.current_step:self.current_step+1, 2, Rad_hor_idx])
         
@@ -65,7 +101,7 @@ class HVACTairEnv(gym.Env):
         
         self.previous_state = np.copy(self.state[:,:,:])
         self.previous_state[0, 2, Setpoint_Temp_idx] = Setpoint_temp
-        self.previous_state[0, 2, Air_flow_rate_idx] = Heating_IO
+        self.previous_state[0, 2, Heating_IO_idx] = Heating_IO
         
         energy_input_unscaled = model_Energy_input.predict(self.previous_state)
         energy_input = y_scaler_Energy.inverse_transform(energy_input_unscaled)
@@ -115,43 +151,43 @@ class HVACTairEnv(gym.Env):
                 
         if self.current_step == 0:        
             self.state[0, 2, Setpoint_Temp_idx] = Setpoint_temp
-            self.state[0, 2, Air_flow_rate_idx] = Heating_IO
+            self.state[0, 2, Heating_IO_idx] = Heating_IO
             tair_next_step = model_Tair.predict(self.state)
             
             next_state = self.data[self.current_step+1:self.current_step+2]
             next_state[0, 1, Setpoint_Temp_idx] = Setpoint_temp
-            next_state[0, 1, Air_flow_rate_idx] = Heating_IO
+            next_state[0, 1, Heating_IO_idx] = Heating_IO
             next_state[0, 2, pred_Tair_idx] = tair_next_step
             
             self.state = next_state
             
         elif self.current_step == 1:
             self.state[0, 2, Setpoint_Temp_idx] = Setpoint_temp
-            self.state[0, 2, Air_flow_rate_idx] = Heating_IO
+            self.state[0, 2, Heating_IO_idx] = Heating_IO
             tair_next_step = model_Tair.predict(self.state)
             
             next_state = self.data[self.current_step+1:self.current_step+2]
             next_state[0, 0, Setpoint_Temp_idx] = self.state[0, 1, Setpoint_Temp_idx]
-            next_state[0, 0, Air_flow_rate_idx] = self.state[0, 1, Air_flow_rate_idx]
+            next_state[0, 0, Heating_IO_idx] = self.state[0, 1, Heating_IO_idx]
             next_state[0, 1, pred_Tair_idx] = self.state[0, 2, pred_Tair_idx]           
             next_state[0, 1, Setpoint_Temp_idx] = Setpoint_temp
-            next_state[0, 1, Air_flow_rate_idx] = Heating_IO
+            next_state[0, 1, Heating_IO_idx] = Heating_IO
             next_state[0, 2, pred_Tair_idx] = tair_next_step
             
             self.state = next_state
 
         else:
             self.state[0, 2, Setpoint_Temp_idx] = Setpoint_temp
-            self.state[0, 2, Air_flow_rate_idx] = Heating_IO 
+            self.state[0, 2, Heating_IO_idx] = Heating_IO 
             tair_next_step = model_Tair.predict(self.state)
             
             next_state = self.data[self.current_step+1:self.current_step+2]
             next_state[0, 0, Setpoint_Temp_idx] = self.state[0, 1, Setpoint_Temp_idx]
-            next_state[0, 0, Air_flow_rate_idx] = self.state[0, 1, Air_flow_rate_idx]
+            next_state[0, 0, Heating_IO_idx] = self.state[0, 1, Heating_IO_idx]
             next_state[0, 0, pred_Tair_idx] = self.state[0, 1, pred_Tair_idx]           
             next_state[0, 1, pred_Tair_idx] = self.state[0, 2, pred_Tair_idx]
             next_state[0, 1, Setpoint_Temp_idx] = Setpoint_temp
-            next_state[0, 1, Air_flow_rate_idx] = Heating_IO            
+            next_state[0, 1, Heating_IO_idx] = Heating_IO            
             next_state[0, 2, pred_Tair_idx] = tair_next_step
             
             self.state = next_state
