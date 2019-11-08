@@ -9,11 +9,11 @@ class HVACTairEnv(gym.Env):
   
     def __init__(self, test_data, all_data, start_pred_index, y_scaler_Tair, y_scaler_Energy, 
                 model_Tair, model_Energy_input, min_reward=-25, max_reward=0, n_actions=22, 
-                max_steps=168, Hourofday_idx, Tamb_idx, Rad_hor_idx, min_Tvl = 20, max_Tvl = 40
+                max_steps=168, Hourofday_idx, Tamb_idx, Rad_hor_idx, min_Tvl = 20, max_Tvl = 40,
                 pred_Tair_idx, Belegung_idx, Setpoint_Temp_idx,
                 Air_flow_rate_idx, Solltemp=21, Energy_divident=500):
         
-        super(pred_Tair_env, self).__init__()
+        super(HVACTairEnv, self).__init__()
         
         self.data = np.copy(test_data)
         self.all_data = np.copy(all_data)
