@@ -1,2 +1,2 @@
 # pred_tair_env
-An environment to train a RL Agent on controlling a HVAC system
+A neural Network based environment to train a DRL Agent on controlling a HVAC system
