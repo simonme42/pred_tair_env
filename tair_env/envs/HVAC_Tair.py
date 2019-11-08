@@ -26,13 +26,13 @@ class HVACTairEnv(gym.Env):
         model_Tair = Sequential()
         model_Tair.add(Bidirectional(LSTM(256, activation='relu'), input_shape=(3, 6)))
         model_Tair.add(Dense(1))
-        model_Tair.compile(optimizer=opt, loss='mse', metrics=['mse'])
+        model_Tair.compile(optimizer="adam", loss='mse', metrics=['mse'])
         model_Tair.load_weights("env_data/LSTM-256-Tair.keras")
         
         model_Energy = Sequential()
         model_Energy.add(Bidirectional(LSTM(256, activation='relu'), input_shape=(3, 6)))
         model_Energy.add(Dense(1))
-        model_Energy.compile(optimizer=opt, loss='mse', metrics=['mse'])
+        model_Energy.compile(optimizer="adam", loss='mse', metrics=['mse'])
         model_Energy.load_weights("env_data/LSTM-256-Energy_input.keras")
         
         min_reward=-25
