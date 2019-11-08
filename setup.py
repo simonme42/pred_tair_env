@@ -4,5 +4,5 @@ setup(name='pred_tair_env',
       version='0.0.1',
       install_requires=['gym',
                        'sklearn',
-                       'tensorflow']
+                       'tensorflow==1.14']
 )
