@@ -9,7 +9,7 @@ class pred_Tair_env(gym.Env):
   
     def __init__(self, test_data, all_data, start_pred_index, y_scaler_Tair, y_scaler_Energy, 
                 model_Tair, model_Energy_input, min_reward=-25, max_reward=0, n_actions=22, 
-                max_steps=168, Hourofday_idx, Tamb_idx, Rad_hor_idx, 
+                max_steps=168, Hourofday_idx, Tamb_idx, Rad_hor_idx, min_Tvl = 20, max_Tvl = 40
                 pred_Tair_idx, Belegung_idx, Setpoint_Temp_idx,
                 Air_flow_rate_idx, Solltemp=21, Energy_divident=500):
         
@@ -23,8 +23,9 @@ class pred_Tair_env(gym.Env):
         self.observation_space = spaces.Box(low=0.0, high=1.0, 
                                             shape=(1,5), 
                                             dtype=np.float32)
+        
         ##create the possible actions the agent can take inside the environment
-        possible_actions = list((np.arange(19,41)-20)/20)
+        possible_actions = list((np.arange(min_Tvl-1,max_Tvl+1)-min_Tvl)/(max_Tvl-min_Tvl))
         for i in range(n_actions):
             if i == 0:
                 possible_actions[i] = [0.0, 0.0]
@@ -58,7 +59,7 @@ class pred_Tair_env(gym.Env):
     def step(self, action):
         # Execute one time step within the environment
         
-        control_params = possible_actions[action]
+        control_params = self.possible_actions[action]
         Setpoint_temp = control_params[0]
         Heating_IO = control_params[1]
         
@@ -89,7 +90,7 @@ class pred_Tair_env(gym.Env):
         
         for i in range(1):
             obs[i, 0] = tair_after_step_scaled
-            obs[i, 1] = occupation
+            obs[i, 1] = self.occupation
             obs[i, 2] = (self.current_daytime-1) / 23  #scale between 0 and 1
             obs[i, 3] = np.copy(self.future_Tamb[0])
             obs[i, 4] = np.copy(self.future_Rad[0])
@@ -108,7 +109,7 @@ class pred_Tair_env(gym.Env):
         return reward
     
     def _take_action(self, action):
-        control_action = possible_actions[action]
+        control_action = self.possible_actions[action]
         Setpoint_temp = control_action[0]
         Heating_IO = control_action[1]
                 
@@ -127,7 +128,6 @@ class pred_Tair_env(gym.Env):
         elif self.current_step == 1:
             self.state[0, 2, Setpoint_Temp_idx] = Setpoint_temp
             self.state[0, 2, Air_flow_rate_idx] = Heating_IO
-
             tair_next_step = model_Tair.predict(self.state)
             
             next_state = self.data[self.current_step+1:self.current_step+2]
@@ -142,8 +142,7 @@ class pred_Tair_env(gym.Env):
 
         else:
             self.state[0, 2, Setpoint_Temp_idx] = Setpoint_temp
-            self.state[0, 2, Air_flow_rate_idx] = Heating_IO
- 
+            self.state[0, 2, Air_flow_rate_idx] = Heating_IO 
             tair_next_step = model_Tair.predict(self.state)
             
             next_state = self.data[self.current_step+1:self.current_step+2]
