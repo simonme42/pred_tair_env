@@ -110,7 +110,7 @@ class HVACTairEnv(gym.Env):
         self._take_action(action)
         self.current_step += 1
         self.current_simtime += 1
-        self.current_daytime = all_data[self.current_simtime][self.Hourofday_idx]
+        self.current_daytime = self.all_data[self.current_simtime][self.Hourofday_idx]
         
         self.future_Tamb = self.data[self.current_step:self.current_step+1, 2, self.Tamb_idx]
         self.future_Rad = self.data[self.current_step:self.current_step+1, 2, self.Rad_hor_idx]
