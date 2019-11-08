@@ -1,3 +1,3 @@
 # pred_tair_env
-An environment to train a deep Reinforcement Learning Agent on controlling a HVAC system. 
+An environment to train a deep Reinforcement Learning Agent on controlling the temperature in a HVAC system. 
 System dynamics are represented by neural Networks, which are trained on a Dataset of the building.
