@@ -133,7 +133,7 @@ class HVACTairEnv_1846(gym.Env):
             
         done = self.current_step > self.max_steps
             
-        return obs, reward, done, {}
+        return obs, float(reward), done, {}
     
     def _get_reward(self):
         
@@ -434,7 +434,7 @@ class HVACTairEnv_7390(gym.Env):
 
         done = self.current_step > self.max_steps
            
-        return obs, reward, done, {}   
+        return obs, float(reward), done, {}   
 
     def _get_reward(self):
         
