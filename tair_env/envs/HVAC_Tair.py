@@ -15,7 +15,7 @@ class HVACTairEnv_1846(gym.Env):
   
     def __init__(self):
         
-        super(HVACTairEnv, self).__init__()
+        super(HVACTairEnv_1846, self).__init__()
 
         test_data = np.load("env_data/test_data.npy")
         all_data = np.load("env_data/all_data.npy")
@@ -202,7 +202,7 @@ class HVACTairEnv_1846(gym.Env):
 
     def __init__(self):
 
-        super(HVACTairEnv, self).__init__()
+        super(HVACTairEnv_7390, self).__init__()
 
         test_data = np.load("env_data_V2/test_data.npy")
 
