@@ -194,7 +194,7 @@ class HVACTairEnv_1846(gym.Env):
             
 
             
-  class HVACTairEnv_7390(gym.Env):
+class HVACTairEnv_7390(gym.Env):
 
     metadata = {'render.modes': ['human']}
 
